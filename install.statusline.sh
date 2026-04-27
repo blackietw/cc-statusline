@@ -8,7 +8,7 @@
 #   4. Merges statusLine config into ~/.claude/settings.json
 #
 # Output displayed in Claude Code (single line):
-#   📁 Dir: folder | 🐍 Py: python | 🌿 Git: branch | 🤖 Model: model · 🧠 Ctx: ▓▓▓ % | 💸 Cost: NT$x | 📊 Tokens: 50.5M↓ 4.0M↑ | ⏱️ Time: duration | Limit: 🟢 5h:x% | 🟢 7d:x%
+#   📁 Dir: folder | 🐍 Py: python | 🌿 Git: branch | 🤖 Model: model | 📅 mm/dd HH:MM | Taipei: ⛅️ +20°C · 🧠 Ctx: ▓▓▓ % | 💸 Cost: NT$x | 📊 Tokens: 50.5M↓ 4.0M↑ | ⏱️ Time: duration | Limit: 🟢 5h:x% | 🟢 7d:x%
 #
 # Requirements:
 #   - jq        (brew install jq)
@@ -18,6 +18,7 @@
 # Optional:
 #   - ANTHROPIC_ADMIN_KEY in ~/.claude/.env  (enables 📊 monthly token usage)
 #     Get one at: https://console.anthropic.com → Settings → API Keys → Admin Keys
+#   - curl in PATH  (enables 🌤️ weather indicator via wttr.in — no API key needed)
 #
 # Usage:
 #   bash install-statusline.sh
@@ -35,7 +36,7 @@ mkdir -p "$CLAUDE_DIR"
 
 # ── Uninstall ────────────────────────────────────────────────────────────────
 if [ "$1" = "--uninstall" ]; then
-  rm -f "$STATUSLINE_PATH" "$MONTHLY_PATH" "$CLAUDE_DIR/monthly-cost.cache"
+  rm -f "$STATUSLINE_PATH" "$MONTHLY_PATH" "$CLAUDE_DIR/monthly-cost.cache" "$CLAUDE_DIR/weather.cache"
   if [ -f "$SETTINGS_PATH" ] && command -v jq >/dev/null 2>&1; then
     tmp=$(mktemp)
     jq 'del(.statusLine)' "$SETTINGS_PATH" > "$tmp" && mv "$tmp" "$SETTINGS_PATH"
@@ -101,10 +102,40 @@ fi
 
 model=$(echo "$input" | jq -r '.model.display_name // .model.id // "unknown"')
 
+# Date + time (local timezone)
+datetime_str=$(date +'%m/%d %H:%M')
+
+# Weather via wttr.in (no API key, IP-geolocated unless STATUSLINE_WEATHER_LOCATION set).
+# Cached at ~/.claude/weather.cache; background refresh when stale.
+weather_str=""
+WEATHER_CACHE="${CLAUDE_DIR:-$HOME/.claude}/weather.cache"
+WEATHER_TTL="${STATUSLINE_WEATHER_TTL:-600}"
+WEATHER_LOC="${STATUSLINE_WEATHER_LOCATION:-}"
+if [ "${STATUSLINE_WEATHER:-1}" = "1" ] && command -v curl > /dev/null 2>&1; then
+  needs_w=1
+  if [ -f "$WEATHER_CACHE" ]; then
+    wmt=$(stat -f "%m" "$WEATHER_CACHE" 2>/dev/null || stat -c "%Y" "$WEATHER_CACHE" 2>/dev/null)
+    if [ -n "$wmt" ]; then
+      wage=$(( $(date +%s) - wmt ))
+      [ "$wage" -lt "$WEATHER_TTL" ] && needs_w=0
+    fi
+  fi
+  if [ "$needs_w" = "1" ]; then
+    (curl -fsSL --max-time 3 "https://wttr.in/${WEATHER_LOC}?format=3" \
+       -o "$WEATHER_CACHE.tmp" 2>/dev/null \
+       && mv "$WEATHER_CACHE.tmp" "$WEATHER_CACHE" &) >/dev/null 2>&1
+  fi
+  if [ -f "$WEATHER_CACHE" ]; then
+    weather_str=$(head -c 120 "$WEATHER_CACHE" 2>/dev/null | tr -d '\n')
+  fi
+fi
+
 line1=$(printf "${BOLD}${CYAN}📁 Dir: %s${RESET}" "$folder")
 [ -n "$py_version" ] && line1+=$(printf " ${DIM}|${RESET} 🐍 Py: ${WHITE}%s${RESET}" "$py_version")
 [ -n "$git_branch" ] && line1+=$(printf " ${DIM}|${RESET} 🌿 Git: ${MAGENTA}%s${RESET}" "$git_branch")
 line1+=$(printf " ${DIM}|${RESET} 🤖 Model: ${WHITE}%s${RESET}" "$model")
+line1+=$(printf " ${DIM}|${RESET} 📅 ${WHITE}%s${RESET}" "$datetime_str")
+[ -n "$weather_str" ] && line1+=$(printf " ${DIM}|${RESET} %s" "$weather_str")
 
 used_pct=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
 BAR_WIDTH=10
@@ -360,8 +391,11 @@ if [ ! -f "$ENV_PATH" ]; then
 ANTHROPIC_ADMIN_KEY=
 
 # Optional overrides
-# STATUSLINE_TWD_RATE=32       # USD → TWD rate for the 💸 indicator
-# MONTHLY_COST_TTL=3600        # cache TTL in seconds for 📊 monthly tokens
+# STATUSLINE_TWD_RATE=32                  # USD → TWD rate for the 💸 indicator
+# MONTHLY_COST_TTL=3600                   # cache TTL in seconds for 📊 monthly tokens
+# STATUSLINE_WEATHER=1                    # set to 0 to disable the 🌤️ indicator
+# STATUSLINE_WEATHER_LOCATION=Taipei      # blank = wttr.in IP-geolocates you
+# STATUSLINE_WEATHER_TTL=600              # cache TTL in seconds for 🌤️ weather
 ENV_EOF
   chmod 600 "$ENV_PATH"
   echo "ℹ️  Created $ENV_PATH (placeholder — fill in ANTHROPIC_ADMIN_KEY for 📊 token indicator)"
