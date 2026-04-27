@@ -8,7 +8,8 @@
 #   4. Merges statusLine config into ~/.claude/settings.json
 #
 # Output displayed in Claude Code (single line):
-#   📁 Dir: folder | 🐍 Py: python | 🌿 Git: branch | 🤖 Model: model | 📅 mm/dd HH:MM | Taipei: ⛅️ +20°C · 🧠 Ctx: ▓▓▓ % | 💸 Cost: NT$x | 📊 Tokens: 50.5M↓ 4.0M↑ | ⏱️ Time: duration | Limit: 🟢 5h:x% | 🟢 7d:x%
+#   🏠 Local | 📁 Dir: folder | 🐍 Py: python | 🌿 Git: branch | 🤖 Model: model | 📅 mm/dd HH:MM | Taipei: ⛅️ +20°C · 🧠 Ctx: ▓▓▓ % | 💸 Cost: NT$x | 📊 Tokens: 50.5M↓ 4.0M↑ | ⏱️ Time: duration | Limit: 🟢 5h:x% | 🟢 7d:x%
+#   🌐 SSH: user@host | 📁 Dir: folder | ...   (when running over SSH)
 #
 # Requirements:
 #   - jq        (brew install jq)
@@ -102,6 +103,15 @@ fi
 
 model=$(echo "$input" | jq -r '.model.display_name // .model.id // "unknown"')
 
+# Local vs SSH context (sshd sets SSH_CONNECTION/SSH_CLIENT/SSH_TTY)
+if [ -n "$SSH_CONNECTION" ] || [ -n "$SSH_CLIENT" ] || [ -n "$SSH_TTY" ]; then
+  loc_user="${USER:-$(whoami 2>/dev/null)}"
+  loc_host=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo remote)
+  loc_label=$(printf "${BOLD}${YELLOW}🌐 SSH: %s@%s${RESET}" "$loc_user" "$loc_host")
+else
+  loc_label=$(printf "${GREEN}🏠 Local${RESET}")
+fi
+
 # Date + time (local timezone)
 datetime_str=$(date +'%m/%d %H:%M')
 
@@ -130,7 +140,8 @@ if [ "${STATUSLINE_WEATHER:-1}" = "1" ] && command -v curl > /dev/null 2>&1; the
   fi
 fi
 
-line1=$(printf "${BOLD}${CYAN}📁 Dir: %s${RESET}" "$folder")
+line1="$loc_label"
+line1+=$(printf " ${DIM}|${RESET} ${BOLD}${CYAN}📁 Dir: %s${RESET}" "$folder")
 [ -n "$py_version" ] && line1+=$(printf " ${DIM}|${RESET} 🐍 Py: ${WHITE}%s${RESET}" "$py_version")
 [ -n "$git_branch" ] && line1+=$(printf " ${DIM}|${RESET} 🌿 Git: ${MAGENTA}%s${RESET}" "$git_branch")
 line1+=$(printf " ${DIM}|${RESET} 🤖 Model: ${WHITE}%s${RESET}" "$model")

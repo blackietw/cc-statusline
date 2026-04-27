@@ -1,9 +1,17 @@
 # cc-statusline
 
-A single-line status line for [Claude Code](https://claude.com/claude-code), with context bar, session cost (NT$), monthly token usage, rate-limit indicators, local date/time, and weather.
+A single-line status line for [Claude Code](https://claude.com/claude-code), with local/SSH context, directory, git branch, model, context bar, session cost (NT$), monthly token usage, rate-limit indicators, date/time, and weather.
+
+Local:
 
 ```
-📁 Dir: my-project | 🐍 Py: 3.12.4 | 🌿 Git: main | 🤖 Model: claude-opus-4-7 | 📅 04/27 14:00 | Taipei: ⛅️ +20°C · 🧠 Ctx: ▓▓▓░░░░░░░ 30% | 💸 Cost: NT$24 | 📊 Tokens: 50.5M↓ 4.0M↑ | ⏱️ Time: 12m 34s | Limit: 🟢 5h:18% | 🟢 7d:42%
+🏠 Local | 📁 Dir: my-project | 🐍 Py: 3.12.4 | 🌿 Git: main | 🤖 Model: claude-opus-4-7 | 📅 04/27 14:00 | Taipei: ⛅️ +20°C · 🧠 Ctx: ▓▓▓░░░░░░░ 30% | 💸 Cost: NT$24 | 📊 Tokens: 50.5M↓ 4.0M↑ | ⏱️ Time: 12m 34s | Limit: 🟢 5h:18% | 🟢 7d:42%
+```
+
+Over SSH (lead indicator turns yellow with `user@host`, so you can never confuse a remote session for a local one):
+
+```
+🌐 SSH: jimmy@prod-box | 📁 Dir: my-project | ...
 ```
 
 ## What gets installed
