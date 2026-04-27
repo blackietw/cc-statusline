@@ -7,9 +7,11 @@
 #   3. Scaffolds ~/.claude/.env                 (placeholder for ANTHROPIC_ADMIN_KEY)
 #   4. Merges statusLine config into ~/.claude/settings.json
 #
-# Output displayed in Claude Code (single line):
-#   🏠 Local | 📁 Dir: folder | 🐍 Py: python | 🌿 Git: branch | 🤖 Model: model | 📅 mm/dd HH:MM | Taipei: ⛅️ +20°C · 🧠 Ctx: ▓▓▓ % | 💸 Cost: NT$x | 📊 Tokens: 50.5M↓ 4.0M↑ | ⏱️ Time: duration | Limit: 🟢 5h:x% | 🟢 7d:x%
-#   🌐 SSH: user@host | 📁 Dir: folder | ...   (when running over SSH)
+# Output displayed in Claude Code (default: two lines, breaks before Ctx):
+#   🏠 Local | 📁 Dir: folder | 🐍 Py: python | 🌿 Git: branch | 🤖 Model: model | 📅 mm/dd HH:MM | Taipei: ⛅️ +20°C
+#   🧠 Ctx: ▓▓▓ % | 💸 Cost: NT$x | 📊 Tokens: 50.5M↓ 4.0M↑ | ⏱️ Time: duration | Limit: 🟢 5h:x% | 🟢 7d:x%
+# Lead element switches to "🌐 SSH: user@host" (yellow, bold) when running over SSH.
+# Set STATUSLINE_LAYOUT=single to fold it back into one line.
 #
 # Requirements:
 #   - jq        (brew install jq)
@@ -247,7 +249,25 @@ line2="$ctx_display"
 [ -n "$duration_display" ] && line2+=" ${DIM}|${RESET} $duration_display"
 [ -n "$rate_display" ]    && line2+=" ${DIM}|${RESET} $rate_display"
 
-printf "%b ${DIM}·${RESET} %b\n" "$line1" "$line2"
+# Layout: STATUSLINE_LAYOUT = single | multi | auto (default)
+# - "single"  → force one line, line1 · line2
+# - "multi"   → force two lines (recommended for narrow windows)
+# - "auto"    → single if $COLUMNS ≥ 220, else two lines.
+#               $COLUMNS isn't reliably set in a statusline subprocess,
+#               so auto mostly behaves like "multi" unless you export
+#               COLUMNS in your shell.
+layout="${STATUSLINE_LAYOUT:-auto}"
+if [ "$layout" = "auto" ]; then
+  cols="${COLUMNS:-0}"
+  [ "$cols" = "0" ] && cols=$(tput cols 2>/dev/null || echo 0)
+  if [ "$cols" -ge 220 ] 2>/dev/null; then layout="single"; else layout="multi"; fi
+fi
+
+if [ "$layout" = "single" ]; then
+  printf "%b ${DIM}·${RESET} %b\n" "$line1" "$line2"
+else
+  printf "%b\n%b\n" "$line1" "$line2"
+fi
 STATUSLINE_EOF
 chmod +x "$STATUSLINE_PATH"
 
@@ -407,6 +427,7 @@ ANTHROPIC_ADMIN_KEY=
 # STATUSLINE_WEATHER=1                    # set to 0 to disable the 🌤️ indicator
 # STATUSLINE_WEATHER_LOCATION=Taipei      # blank = wttr.in IP-geolocates you
 # STATUSLINE_WEATHER_TTL=600              # cache TTL in seconds for 🌤️ weather
+# STATUSLINE_LAYOUT=auto                  # auto | single | multi  (default: auto → multi unless $COLUMNS ≥ 220)
 ENV_EOF
   chmod 600 "$ENV_PATH"
   echo "ℹ️  Created $ENV_PATH (placeholder — fill in ANTHROPIC_ADMIN_KEY for 📊 token indicator)"
