@@ -249,14 +249,14 @@ line2="$ctx_display"
 [ -n "$duration_display" ] && line2+=" ${DIM}|${RESET} $duration_display"
 [ -n "$rate_display" ]    && line2+=" ${DIM}|${RESET} $rate_display"
 
-# Layout: STATUSLINE_LAYOUT = single | multi | auto (default)
-# - "single"  → force one line, line1 · line2
-# - "multi"   → force two lines (recommended for narrow windows)
-# - "auto"    → single if $COLUMNS ≥ 220, else two lines.
+# Layout: STATUSLINE_LAYOUT = multi (default) | single | auto
+# - "multi"   → two lines, breaking before the Ctx bar
+# - "single"  → one line, line1 · line2
+# - "auto"    → single if $COLUMNS ≥ 220, else multi.
 #               $COLUMNS isn't reliably set in a statusline subprocess,
 #               so auto mostly behaves like "multi" unless you export
-#               COLUMNS in your shell.
-layout="${STATUSLINE_LAYOUT:-auto}"
+#               COLUMNS from your shell rc.
+layout="${STATUSLINE_LAYOUT:-multi}"
 if [ "$layout" = "auto" ]; then
   cols="${COLUMNS:-0}"
   [ "$cols" = "0" ] && cols=$(tput cols 2>/dev/null || echo 0)
@@ -427,7 +427,7 @@ ANTHROPIC_ADMIN_KEY=
 # STATUSLINE_WEATHER=1                    # set to 0 to disable the 🌤️ indicator
 # STATUSLINE_WEATHER_LOCATION=Taipei      # blank = wttr.in IP-geolocates you
 # STATUSLINE_WEATHER_TTL=600              # cache TTL in seconds for 🌤️ weather
-# STATUSLINE_LAYOUT=auto                  # auto | single | multi  (default: auto → multi unless $COLUMNS ≥ 220)
+# STATUSLINE_LAYOUT=multi                 # multi (default) | single | auto
 ENV_EOF
   chmod 600 "$ENV_PATH"
   echo "ℹ️  Created $ENV_PATH (placeholder — fill in ANTHROPIC_ADMIN_KEY for 📊 token indicator)"

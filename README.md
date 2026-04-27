@@ -69,13 +69,13 @@ Override defaults via `~/.claude/.env`:
 | `STATUSLINE_WEATHER` | `1` | Set to `0` to hide the 🌤️ weather indicator |
 | `STATUSLINE_WEATHER_LOCATION` | *(empty)* | City name for [wttr.in](https://wttr.in) (e.g. `Taipei`, `London`). Empty = IP-geolocate. |
 | `STATUSLINE_WEATHER_TTL` | `600` | Cache TTL in seconds for the 🌤️ weather indicator |
-| `STATUSLINE_LAYOUT` | `auto` | `single` = one line, `multi` = two lines, `auto` = single if `$COLUMNS ≥ 220` else multi |
+| `STATUSLINE_LAYOUT` | `multi` | `multi` = two lines (default), `single` = one line, `auto` = single if `$COLUMNS ≥ 220` else multi |
 
 The 🌤️ indicator queries [wttr.in](https://wttr.in) (no API key, no signup). Cached results live in `~/.claude/weather.cache`; a stale cache triggers a fire-and-forget background refresh.
 
 ### About responsive (`auto`) layout
 
-Truly automatic resizing isn't possible: Claude Code calls the statusline as a subprocess that doesn't inherit the terminal, so `tput cols` and `stty size` fail and `$COLUMNS` is usually unset. To make `auto` actually flip to single-line on wide windows, export `COLUMNS` from your shell rc — e.g.
+The default is `multi` because Claude Code calls the statusline as a subprocess that doesn't inherit the terminal — `tput cols` and `stty size` fail, and `$COLUMNS` is usually unset, so we can't truly auto-detect window width. If you want `STATUSLINE_LAYOUT=auto` to actually flip to single-line on wide windows, export `COLUMNS` from your shell rc — e.g.
 
 ```bash
 # in ~/.zshrc / ~/.bashrc
